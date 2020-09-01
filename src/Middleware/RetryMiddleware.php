@@ -72,11 +72,12 @@ class RetryMiddleware
         $nextHandler = $this->nextHandler;
 
         if (!isset($options['timeoutMillis'])) {
-            // default to "noRetriesRpcTimeoutMillis" when retries are disabled, otherwise use "initialRpcTimeoutMillis"
+            // default to "noRetriesRpcTimeoutMillis" when retries are disabled, otherwise use one
+            // of the "initialRpcTimeoutMillis", "maxRpcTimeoutMillis", or "totalTimeoutMs" if set.
             if (!$this->retrySettings->retriesEnabled() && $this->retrySettings->getNoRetriesRpcTimeoutMillis() > 0) {
                 $options['timeoutMillis'] = $this->retrySettings->getNoRetriesRpcTimeoutMillis();
-            } elseif ($this->retrySettings->getInitialRpcTimeoutMillis() > 0) {
-                $options['timeoutMillis'] = $this->retrySettings->getInitialRpcTimeoutMillis();
+            } else if ($this->getFirstAttemptTimeout() > 0) {
+                $options['timeoutMillis'] = $this->getFirstAttemptTimeout();
             }
         }
 
@@ -132,11 +133,7 @@ class RetryMiddleware
             usleep($delayMs * 1000);
         }
         $delayMs = min($delayMs * $delayMult, $maxDelayMs);
-        $timeoutMs = min(
-            $timeoutMs * $timeoutMult,
-            $maxTimeoutMs,
-            $deadlineMs - $this->getCurrentTimeMs()
-        );
+        $timeoutMs = $this->nextAttemptTimeout($deadlineMs, $options);
 
         $nextHandler = new RetryMiddleware(
             $this->nextHandler,
@@ -153,6 +150,47 @@ class RetryMiddleware
             $call,
             $options
         );
+    }
+
+    private function getFirstAttemptTimeout()
+    {
+        $timeout = 0;
+        if ($this->retrySettings->getInitialRpcTimeoutMillis() > 0) {
+            $timeout = $this->retrySettings->getInitialRpcTimeoutMillis();
+        } else if ($this->retrySettings->getMaxRpcTimeoutMillis() > 0) {
+            $timeout = $this->retrySettings->getMaxRpcTimeoutMillis();
+        } else if ($this->retrySettings->getTotalTimeoutMillis() > 0) {
+            $timeout = $this->retrySettings->getTotalTimeoutMillis();
+        }
+
+        return $timeout;
+    }
+
+    private function nextAttemptTimeout($deadlineMs, array $options)
+    {
+        $timeoutMs = $options['timeoutMillis'];
+        $timeRemaining = $deadlineMs - $this->getCurrentTimeMs();
+        // per-RPC timeout-backoff settings
+        $initialTimeoutMs = $this->retrySettings->getInitialRpcTimeoutMillis();
+        $maxTimeoutMs = $this->retrySettings->getMaxRpcTimeoutMillis();
+        $timeoutMult = $this->retrySettings->getRpcTimeoutMultiplier();
+
+        // If the per-RPC timeout-backoff settings are supplied, use them to
+        // calculate the next RPC attempt timeout. Otherwise, use the
+        // time-remaining in the total timeout.
+        if ($timeoutMult > 0 && $maxTimeoutMs > 0 && $initialTimeoutMs > 0) {
+            $timeoutMs = min(
+                $timeoutMs * $timeoutMult,
+                $maxTimeoutMs
+            );
+        }
+
+        $timeoutMs = min(
+            $timeoutMs,
+            $timeRemaining
+        );
+
+        return $timeoutMs;
     }
 
     protected function getCurrentTimeMs()
