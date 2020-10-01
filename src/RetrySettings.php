@@ -187,6 +187,8 @@ class RetrySettings
 
     private $noRetriesRpcTimeoutMillis;
 
+    private $overallTimeoutMillis;
+
     /**
      * Constructs an instance.
      *
@@ -211,6 +213,11 @@ class RetrySettings
      *     @type int     $rpcTimeoutMultiplier The exponential multiplier of rpc timeout.
      *     @type int     $maxRpcTimeoutMillis The max timeout of rpc call in milliseconds.
      *     @type int     $totalTimeoutMillis The max accumulative timeout in total.
+     *    
+     *     @type int     $overallTimeoutMillis The timeout of the entire logical call in milliseconds.
+     *                   Any RPC attempts made will only use the time remaining until the deadline set
+     *                   set using the overallTimeoutMillis from the start of the logical call. If set,
+     *                   this takes precedence over all other timeout options.
      * }
      */
     public function __construct(array $settings)
@@ -239,6 +246,9 @@ class RetrySettings
         $this->noRetriesRpcTimeoutMillis = array_key_exists('noRetriesRpcTimeoutMillis', $settings)
             ? $settings['noRetriesRpcTimeoutMillis']
             : $this->initialRpcTimeoutMillis;
+        $this->overallTimeoutMillis = array_key_exists('overallTimeoutMillis', $settings)
+            ? $settings['overallTimeoutMillis']
+            : null;
     }
 
     /**
@@ -345,6 +355,7 @@ class RetrySettings
             'retryableCodes' => $this->getRetryableCodes(),
             'retriesEnabled' => $this->retriesEnabled(),
             'noRetriesRpcTimeoutMillis' => $this->getNoRetriesRpcTimeoutMillis(),
+            'overallTimeoutMillis' => $this->getOverallTimeoutMillis(),
         ];
         return new RetrySettings($settings + $existingSettings);
     }
@@ -355,6 +366,14 @@ class RetrySettings
     public function retriesEnabled()
     {
         return $this->retriesEnabled;
+    }
+
+    /**
+     * @return int The timeout of the entire logical call.
+     */
+    public function getOverallTimeoutMillis()
+    {
+        return $this->overallTimeoutMillis;
     }
 
     /**

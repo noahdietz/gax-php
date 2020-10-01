@@ -72,8 +72,11 @@ class RetryMiddleware
         $nextHandler = $this->nextHandler;
 
         if (!isset($options['timeoutMillis'])) {
-            // default to "noRetriesRpcTimeoutMillis" when retries are disabled, otherwise use "initialRpcTimeoutMillis"
-            if (!$this->retrySettings->retriesEnabled() && $this->retrySettings->getNoRetriesRpcTimeoutMillis() > 0) {
+            // if overallTimeoutMillis is set, it takes precedence over all other timeout options
+            if ($this->retrySettings->getOverallTimeoutMillis() != null) {
+                $options['timeoutMillis'] = $this->retrySettings->getOverallTimeoutMillis();
+            } else if (!$this->retrySettings->retriesEnabled() && $this->retrySettings->getNoRetriesRpcTimeoutMillis() > 0) {
+                // default to "noRetriesRpcTimeoutMillis" when retries are disabled, otherwise use "initialRpcTimeoutMillis"
                 $options['timeoutMillis'] = $this->retrySettings->getNoRetriesRpcTimeoutMillis();
             } elseif ($this->retrySettings->getInitialRpcTimeoutMillis() > 0) {
                 $options['timeoutMillis'] = $this->retrySettings->getInitialRpcTimeoutMillis();
@@ -112,7 +115,8 @@ class RetryMiddleware
         $maxDelayMs = $this->retrySettings->getMaxRetryDelayMillis();
         $timeoutMult = $this->retrySettings->getRpcTimeoutMultiplier();
         $maxTimeoutMs = $this->retrySettings->getMaxRpcTimeoutMillis();
-        $totalTimeoutMs = $this->retrySettings->getTotalTimeoutMillis();
+        $overallTimeout = $this->retrySettings->getOverallTimeoutMillis();
+        $totalTimeoutMs = $overallTimeout != null ? $overallTimeout : $this->retrySettings->getTotalTimeoutMillis();
 
         $delayMs = $this->retrySettings->getInitialRetryDelayMillis();
         $timeoutMs = $options['timeoutMillis'];
@@ -132,11 +136,16 @@ class RetryMiddleware
             usleep($delayMs * 1000);
         }
         $delayMs = min($delayMs * $delayMult, $maxDelayMs);
-        $timeoutMs = min(
-            $timeoutMs * $timeoutMult,
-            $maxTimeoutMs,
-            $deadlineMs - $this->getCurrentTimeMs()
-        );
+        
+        if ($overallTimeout != null) {
+            $timeoutMs = $deadlineMs - $this->getCurrentTimeMs();
+        } else {
+            $timeoutMs = min(
+                $timeoutMs * $timeoutMult,
+                $maxTimeoutMs,
+                $deadlineMs - $this->getCurrentTimeMs()
+            );
+        }
 
         $nextHandler = new RetryMiddleware(
             $this->nextHandler,
