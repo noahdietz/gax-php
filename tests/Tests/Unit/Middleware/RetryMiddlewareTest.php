@@ -211,6 +211,44 @@ class RetryMiddlewareTest extends TestCase
         }
     }
 
+    public function testRetryBackoffOverallTimeoutOverriden()
+    {
+        $call = $this->getMock(Call::class, [], [], '', false);
+        $retrySettings = RetrySettings::constructDefault()
+            ->with([
+                'overallTimeoutMillis' => 2000,
+                'retriesEnabled' => true,
+                'retryableCodes' => [ApiStatus::CANCELLED],
+            ]);
+        $override = 4000;
+        $callCount = 0;
+        $observedTimeouts = [];
+        $handler = function(Call $call, $options) use (&$callCount, &$observedTimeouts) {
+            $callCount += 1;
+            $observedTimeouts[] = $options['timeoutMillis'];
+            return $promise = new Promise(function () use (&$promise, $callCount) {
+                if ($callCount < 3) {
+                    throw new ApiException('Cancelled!', Code::CANCELLED, ApiStatus::CANCELLED);
+                }
+                $promise->resolve('Ok!');
+            });
+        };
+        $middleware = new RetryMiddleware($handler, $retrySettings);
+        $response = $middleware(
+            $call,
+            ['timeoutMillis' => $override]
+        )->wait();
+
+        $this->assertEquals('Ok!', $response);
+        $this->assertEquals(3, $callCount);
+        $this->assertEquals(3, count($observedTimeouts));
+        $this->assertEquals($observedTimeouts[0], $override);
+        for ($i = 1; $i < count($observedTimeouts); $i++) {
+            $this->assertTrue($observedTimeouts[$i-1] > $observedTimeouts[$i]);
+            $this->assertTrue($observedTimeouts[$i] > $retrySettings->getOverallTimeoutMillis());
+        }
+    }
+
     public function testNoRetryOverallTimeout()
     {
         $call = $this->getMock(Call::class, [], [], '', false);

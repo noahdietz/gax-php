@@ -81,6 +81,10 @@ class RetryMiddleware
             } elseif ($this->retrySettings->getInitialRpcTimeoutMillis() > 0) {
                 $options['timeoutMillis'] = $this->retrySettings->getInitialRpcTimeoutMillis();
             }
+        } else if ($this->retrySettings->getOverallTimeoutMillis() != null) {
+            $this->retrySettings = $this->retrySettings->with([
+                'overallTimeoutMillis' => $options['timeoutMillis'],
+            ]);
         }
 
         // Call the handler immediately if retry settings are disabled.
