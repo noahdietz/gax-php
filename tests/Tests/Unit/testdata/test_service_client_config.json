@@ -21,16 +21,19 @@
       },
       "methods": {
         "SimpleMethod": {
+          "overall_timeout_millis": 40000,
           "timeout_millis": 40000,
           "retry_codes_name": "idempotent",
           "retry_params_name": "default"
         },
         "PageStreamingMethod": {
+          "overall_timeout_millis": 40000,
           "timeout_millis": 40000,
           "retry_codes_name": "non_idempotent",
           "retry_params_name": "default"
         },
         "TimeoutOnlyMethod": {
+          "overall_timeout_millis": 40000,
           "timeout_millis": 40000
         }
       }

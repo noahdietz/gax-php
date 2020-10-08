@@ -276,11 +276,13 @@ class RetrySettings
         $retryParams = $serviceConfig['retry_params'];
         foreach ($serviceConfig['methods'] as $methodName => $methodConfig) {
             $timeoutMillis = $methodConfig['timeout_millis'];
+            $overallTimeoutMillis = array_key_exists('overall_timeout_millis', $methodConfig) ? $methodConfig['overall_timeout_millis'] : null;
 
             if (empty($methodConfig['retry_codes_name']) || empty($methodConfig['retry_params_name'])) {
                 // Construct a RetrySettings object with retries disabled
                 $retrySettings = self::constructDefault()->with([
                     'noRetriesRpcTimeoutMillis' => $timeoutMillis,
+                    'overallTimeoutMillis' => $overallTimeoutMillis,
                 ]);
             } else {
                 $retryCodesName = $methodConfig['retry_codes_name'];
@@ -302,6 +304,7 @@ class RetrySettings
                 $retryParameters = self::convertArrayFromSnakeCase($retryParams[$retryParamsName]) + [
                     'retryableCodes' => $retryCodes[$retryCodesName],
                     'noRetriesRpcTimeoutMillis' => $timeoutMillis,
+                    'overallTimeoutMillis' => $overallTimeoutMillis,
                 ];
                 if ($disableRetries) {
                     $retryParameters['retriesEnabled'] = false;

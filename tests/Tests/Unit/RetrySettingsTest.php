@@ -95,11 +95,14 @@ class RetrySettingsTest extends TestCase
         $simpleMethod = $defaultRetrySettings['SimpleMethod'];
         $this->assertFalse($simpleMethod->retriesEnabled());
         $this->assertEquals(40000, $simpleMethod->getNoRetriesRpcTimeoutMillis());
+        $this->assertEquals(40000, $simpleMethod->getOverallTimeoutMillis());
         $pageStreamingMethod = $defaultRetrySettings['PageStreamingMethod'];
         $this->assertEquals(['INTERNAL'], $pageStreamingMethod->getRetryableCodes());
+        $this->assertEquals(40000, $pageStreamingMethod->getOverallTimeoutMillis());
         $timeoutOnlyMethod = $defaultRetrySettings['TimeoutOnlyMethod'];
         $this->assertFalse($timeoutOnlyMethod->retriesEnabled());
         $this->assertEquals(40000, $timeoutOnlyMethod->getNoRetriesRpcTimeoutMillis());
+        $this->assertEquals(40000, $timeoutOnlyMethod->getOverallTimeoutMillis());
     }
 
     /**
