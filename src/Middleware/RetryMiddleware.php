@@ -82,6 +82,9 @@ class RetryMiddleware
                 $options['timeoutMillis'] = $this->retrySettings->getInitialRpcTimeoutMillis();
             }
         } else if ($this->retrySettings->getOverallTimeoutMillis() != null) {
+            // if overallTimeoutMillis is enabled, and the timeoutMillis option is provided,
+            // override the overallTimeoutMillis with the timeoutMillis provided at call time
+            // so that subsequent attempts respect the timeoutMillis as the overallTimeoutMillis.
             $this->retrySettings = $this->retrySettings->with([
                 'overallTimeoutMillis' => $options['timeoutMillis'],
             ]);
