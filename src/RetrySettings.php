@@ -168,6 +168,46 @@ namespace Google\ApiCore;
  *     ],
  * ]);
  * ```
+ *
+ * Configure the use of logical timeout
+ * ------------------------------------
+ *
+ * To configure the use of a logical timeout, where a logical timeout is the
+ * duration a method is given to complete one or more RPC attempts, with each
+ * attempt using only the time remaining in the logical timeout, use
+ * {@see Google\ApiCore\RetrySettings::withLogicalTimeout()}.
+ *
+ * ```
+ * $customRetrySettings = $customRetrySettings->withLogicalTimeout(30000);
+ *
+ * $result = $client->listGroups($name, [
+ *     'retrySettings' => $customRetrySettings
+ * ]);
+ * ```
+ *
+ * You can also combine {@see Google\ApiCore\RetrySettings::logicalTimeout()}
+ * and {@see Google\ApiCore\RetrySettings::with()}.
+ *
+ * ```
+ * $timeoutSettings = RetrySettings::logicalTimeout(30000);
+ *
+ * $customRetrySettings = $customRetrySettings->with($timeoutSettings);
+ *
+ * $result = $client->listGroups($name, [
+ *     'retrySettings' => $customRetrySettings
+ * ]);
+ * ```
+ *
+ * {@see Google\ApiCore\RetrySettings::logicalTimeout()} can also be used on a
+ * method call independent of a RetrySettings instance.
+ *
+ * ```
+ * $timeoutSettings = RetrySettings::logicalTimeout(30000);
+ *
+ * $result = $client->listGroups($name, [
+ *     'retrySettings' => $timeoutSettings
+ * ]);
+ * ```
  */
 class RetrySettings
 {
@@ -347,6 +387,53 @@ class RetrySettings
             'noRetriesRpcTimeoutMillis' => $this->getNoRetriesRpcTimeoutMillis(),
         ];
         return new RetrySettings($settings + $existingSettings);
+    }
+
+    /**
+     * Creates a new instance of RetrySettings that updates the timeout settings in the existing
+     * instance with the timeout specified in the $timeout parameter interpreted as a logical timeout.
+     * All other settings (exponential backoff delay, retryable codes, etc.) remain the same.
+     *
+     * @param int $timeout {
+     *     The timeout in milliseconds to be used as a logical call timeout.
+     * }
+     * @return RetrySettings
+     */
+    public function withLogicalTimeout(int $timeout)
+    {
+        $settings = [
+            'initialRetryDelayMillis' => $this->getInitialRetryDelayMillis(),
+            'retryDelayMultiplier' => $this->getRetryDelayMultiplier(),
+            'maxRetryDelayMillis' => $this->getMaxRetryDelayMillis(),
+            'initialRpcTimeoutMillis' => $timeout,
+            'rpcTimeoutMultiplier' => 1.0,
+            'maxRpcTimeoutMillis' => $timeout,
+            'totalTimeoutMillis' => $timeout,
+            'noRetriesRpcTimeoutMillis' => $timeout,
+            'retryableCodes' => $this->getRetryableCodes(),
+            'retriesEnabled' => $this->retriesEnabled(),
+        ];
+        return new RetrySettings($settings);
+    }
+
+    /**
+     * Creates an associative array of the {@see Google\ApiCore\RetrySettings} timeout fields configured
+     * with the given timeout specified in the $timeout parameter interpreted as a logical timeout.
+     *
+     * @param int $timeout {
+     *     The timeout in milliseconds to be used as a logical call timeout.
+     * }
+     * @return array
+     */
+    public static function logicalTimeout(int $timeout)
+    {
+        return [
+            'initialRpcTimeoutMillis' => $timeout,
+            'maxRpcTimeoutMillis' => $timeout,
+            'totalTimeoutMillis' => $timeout,
+            'noRetriesRpcTimeoutMillis' => $timeout,
+            'rpcTimeoutMultiplier' => 1.0
+        ];
     }
 
     /**
