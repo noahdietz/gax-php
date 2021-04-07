@@ -399,7 +399,7 @@ class RetrySettings
      * }
      * @return RetrySettings
      */
-    public function withLogicalTimeout(int $timeout)
+    public function withLogicalTimeout($timeout)
     {
         $settings = [
             'initialRetryDelayMillis' => $this->getInitialRetryDelayMillis(),
@@ -425,7 +425,7 @@ class RetrySettings
      * }
      * @return array
      */
-    public static function logicalTimeout(int $timeout)
+    public static function logicalTimeout($timeout)
     {
         return [
             'initialRpcTimeoutMillis' => $timeout,
