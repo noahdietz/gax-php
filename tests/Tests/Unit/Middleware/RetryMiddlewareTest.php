@@ -184,7 +184,7 @@ class RetryMiddlewareTest extends TestCase
                 'retriesEnabled' => true,
                 'retryableCodes' => [ApiStatus::CANCELLED],
             ])
-            ->withLogicalTimeout($timeout);
+            ->with(RetrySettings::logicalTimeout($timeout));
         $callCount = 0;
         $observedTimeouts = [];
         $handler = function(Call $call, $options) use (&$callCount, &$observedTimeouts) {
