@@ -163,6 +163,11 @@ class RestTransport implements TransportInterface
             // Exclude headers here because they will be added in _serverStreamRequest().
         );
 
+        $decoderOptions = [];
+        if (isset($options['decoderOptions'])) {
+            $decoderOptions = $options['decoderOptions'];
+        }
+
         return new ServerStream(
             $this->_serverStreamingRequest(
                 $this->httpHandler,
@@ -170,7 +175,7 @@ class RestTransport implements TransportInterface
                 $headers,
                 $call->getDecodeType(),
                 $callOptions,
-                // TODO(noahdietz): Add decoderOptions here.
+                $decoderOptions,
             ),
             $call->getDescriptor()
         );

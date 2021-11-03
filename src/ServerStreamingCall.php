@@ -54,8 +54,7 @@ interface ServerStreamingCall
     /**
      * Return the status of the server stream.
      *
-     * @return \ApiException The status object, with integer $code, string
-     *                       $details, and array $metadata members.
+     * @return \ApiException The API status.
      */
     public function getStatus();
 
